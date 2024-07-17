@@ -52,7 +52,7 @@ jobs:
         host: ${{ secrets.EC2_SERVER_HOST }}
         username: ubuntu
         key: ${{ secrets.PRIVATE_KEY }}
-        source: "build/libs/*.jar"
+        source: "/build/libs/*.jar"
         target: "~/source"
         rm: true
         
