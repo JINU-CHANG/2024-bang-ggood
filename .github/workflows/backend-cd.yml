@@ -49,6 +49,7 @@ jobs:
         host: ${{ secrets.EC2_SERVER_HOST }}
         username: ubuntu
         key: ${{ secrets.PRIVATE_KEY }}
+        port: 80
         script: |
           sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
           sudo docker rm -f $(docker ps -qa)
