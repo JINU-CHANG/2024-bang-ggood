@@ -42,3 +42,16 @@ jobs:
         docker build -t ${{ secrets.PROJECT_NAME }} .
         docker tag ${{ secrets.PROJECT_NAME }} ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
         docker push ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+        
+    - name: EC2 Docker Run
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          sudo docker rm -f $(docker ps -qa)
+          sudo docker rmi ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+          sudo docker run -d -p 80:8080 ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
