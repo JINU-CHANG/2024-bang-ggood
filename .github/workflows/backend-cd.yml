@@ -30,41 +30,28 @@ jobs:
       with:
         gradle-version: 8.8
 
-    - name: Gradle Caching
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build with Gradle
       run: ./gradlew build
 
-    - name: List build directory
-      run: ls -la build/libs
-      
-    - name: Push to EC2
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.EC2_SERVER_HOST }}
-        username: ubuntu
-        key: ${{ secrets.PRIVATE_KEY }}
-        source: "build/libs/*.jar"
-        target: "~/source"
-        rm: true
+    - name: Build Docker Image And Push to DockerHub
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker build -t ${{ secrets.PROJECT_NAME }} .
+        docker tag ${{ secrets.PROJECT_NAME }} ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
         
-    - name: SSH to EC2 and run deployment script
+    - name: EC2 Docker Run
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.EC2_SERVER_HOST }}
-        username: ec2-user
-        key: ${{ secrets.PRIVATE_KEY }}
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
         script: |
-          cd source
-          nohup java -jar bang-ggood-0.0.1-SNAPSHOT.jar &
+          sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          sudo docker rm -f $(docker ps -qa)
+          sudo docker rmi ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
+          sudo docker run -d -p 80:8080 ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
